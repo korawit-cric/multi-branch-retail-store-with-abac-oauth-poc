@@ -1,6 +1,6 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": ["**/.env.*local", "**/.env"],
   "globalEnv": [
     "NODE_ENV",
     "AUTH_COOKIE_SECRET",
@@ -18,7 +18,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": ["NEXT_PUBLIC_API_URL"]
+      "env": ["NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_API"]
     },
     "db:generate": {
       "cache": false

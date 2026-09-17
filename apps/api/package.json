@@ -23,7 +23,8 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "reflect-metadata": "^0.2.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

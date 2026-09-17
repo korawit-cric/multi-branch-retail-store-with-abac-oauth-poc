@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { challenge, equal, open, randomSecret, seal } from './auth.crypto';
 import type { LoginAttempt, MockCode } from './auth-flow.types';
@@ -7,7 +7,15 @@ import type { LoginAttempt, MockCode } from './auth-flow.types';
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // This provider is deliberately local-only and is not a real identity provider.
+  private readonly consumedCodes = new Map<string, number>();
+  private requireDemo() {
+    if (process.env.NODE_ENV === 'production')
+      throw new ForbiddenException('Mock OAuth is disabled in production');
+  }
+
   createLogin(apiUrl: string, persona?: string) {
+    this.requireDemo();
     const state = randomSecret();
     const verifier = randomSecret();
     const redirectUri = `${apiUrl}/auth/callback`;
@@ -35,6 +43,7 @@ export class AuthService {
   }
 
   async createMockCode(params: URLSearchParams, apiUrl: string) {
+    this.requireDemo();
     const redirectUri = `${apiUrl}/auth/callback`;
     if (
       params.get('client_id') !== 'demo-app' ||
@@ -62,14 +71,20 @@ export class AuthService {
   }
 
   exchangeMockCode(codeToken: string, verifier: string, redirectUri: string) {
+    this.requireDemo();
+    for (const [token, expires] of this.consumedCodes) {
+      if (expires < Date.now()) this.consumedCodes.delete(token);
+    }
     const code = open<MockCode>(codeToken, 'mock-code');
     if (
       !code ||
+      this.consumedCodes.has(codeToken) ||
       code.expiresAt < Date.now() ||
       code.redirectUri !== redirectUri ||
       !equal(code.codeChallenge, challenge(verifier))
     )
       return null;
+    this.consumedCodes.set(codeToken, code.expiresAt);
     return { subject: code.subject, displayName: code.displayName };
   }
 
