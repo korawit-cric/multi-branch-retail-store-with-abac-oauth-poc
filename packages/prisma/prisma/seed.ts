@@ -1,6 +1,9 @@
+import 'dotenv/config';
 import prisma, { OrderStatus, RoleCode } from '../src/index';
 
 const permissionCodes = [
+  'store.read',
+  'order.create',
   'order.read',
   'order.update_status',
   'order.refund',
@@ -10,14 +13,27 @@ const permissionCodes = [
 
 const grants: Record<RoleCode, readonly string[]> = {
   CUSTOMER: ['order.read'],
-  STORE_STAFF: ['order.read', 'order.update_status'],
+  STORE_STAFF: [
+    'store.read',
+    'order.create',
+    'order.read',
+    'order.update_status',
+  ],
   STORE_MANAGER: [
+    'store.read',
+    'order.create',
     'order.read',
     'order.update_status',
     'order.refund',
     'inventory.adjust',
   ],
-  HQ_ADMIN: ['promotion.manage'],
+  HQ_ADMIN: [
+    'store.read',
+    'order.read',
+    'order.create',
+    'order.update_status',
+    'inventory.adjust',
+  ],
 };
 
 async function main() {
@@ -49,9 +65,27 @@ async function main() {
     }
 
     for (const store of [
-      { id: '10', tenantId: 'thai-food', region: 'TH' },
-      { id: '42', tenantId: 'thai-food', region: 'TH' },
-      { id: 'other-10', tenantId: 'other-company', region: 'TH' },
+      {
+        id: '10',
+        name: 'Siam Square',
+        address: 'Rama I Road, Bangkok',
+        tenantId: 'thai-food',
+        region: 'TH',
+      },
+      {
+        id: '42',
+        name: 'Ari Neighborhood',
+        address: 'Phahonyothin Road, Bangkok',
+        tenantId: 'thai-food',
+        region: 'TH',
+      },
+      {
+        id: 'other-10',
+        name: 'Other company',
+        address: 'Private branch',
+        tenantId: 'other-company',
+        region: 'TH',
+      },
     ])
       await tx.store.upsert({
         where: { id: store.id },
@@ -104,7 +138,7 @@ async function main() {
         tenantId: 'thai-food',
         region: 'TH',
         refundLimit: 0,
-        stores: [],
+        stores: ['10', '42'],
       },
     ];
     for (const user of users) {
@@ -135,6 +169,73 @@ async function main() {
       await tx.userStore.createMany({
         data: user.stores.map((storeId) => ({ userId: user.id, storeId })),
       });
+    }
+
+    const products = [
+      {
+        id: 'coffee',
+        sku: 'BEV-001',
+        name: 'Cold brew coffee',
+        category: 'Beverages',
+        price: 85,
+        stock: 32,
+      },
+      {
+        id: 'tea',
+        sku: 'BEV-002',
+        name: 'Thai milk tea',
+        category: 'Beverages',
+        price: 65,
+        stock: 8,
+      },
+      {
+        id: 'rice',
+        sku: 'FOOD-001',
+        name: 'Jasmine rice bowl',
+        category: 'Kitchen',
+        price: 120,
+        stock: 24,
+      },
+      {
+        id: 'cookie',
+        sku: 'BAKE-001',
+        name: 'Butter cookie',
+        category: 'Bakery',
+        price: 45,
+        stock: 5,
+      },
+      {
+        id: 'tote',
+        sku: 'LIFE-001',
+        name: 'Everyday canvas tote',
+        category: 'Lifestyle',
+        price: 250,
+        stock: 18,
+      },
+    ];
+    for (const { price, stock, ...product } of products) {
+      await tx.product.upsert({
+        where: { id: product.id },
+        update: {},
+        create: { ...product, tenantId: 'thai-food' },
+      });
+      for (const storeId of ['10', '42']) {
+        const id = `${storeId}-${product.id}`;
+        const exists = await tx.storeProduct.findUnique({ where: { id } });
+        if (!exists)
+          await tx.storeProduct.create({
+            data: {
+              id,
+              storeId,
+              productId: product.id,
+              price: price + (storeId === '42' ? 5 : 0),
+              stock,
+              movements: {
+                create: { quantityDelta: stock, reason: 'Opening inventory' },
+              },
+            },
+          });
+      }
     }
 
     const orders = [
@@ -178,7 +279,7 @@ async function main() {
     for (const order of orders)
       await tx.order.upsert({
         where: { id: order.id },
-        update: order,
+        update: {},
         create: order,
       });
   });
