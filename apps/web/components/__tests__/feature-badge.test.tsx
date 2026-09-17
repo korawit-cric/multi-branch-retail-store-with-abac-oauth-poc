@@ -10,12 +10,12 @@ describe('FeatureBadge', () => {
   it('applies highlight styles when highlight prop is true', () => {
     render(<FeatureBadge label="Highlighted" highlight />);
     const badge = screen.getByText('Highlighted');
-    expect(badge).toHaveClass('bg-blue-100');
+    expect(badge).toHaveClass('bg-primary-500/20');
   });
 
   it('applies default styles when highlight prop is false', () => {
     render(<FeatureBadge label="Default" />);
     const badge = screen.getByText('Default');
-    expect(badge).toHaveClass('bg-gray-100');
+    expect(badge).toHaveClass('bg-surface');
   });
 });

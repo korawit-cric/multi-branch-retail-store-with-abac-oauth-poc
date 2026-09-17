@@ -1,17 +1,10 @@
 import type { Metadata } from 'next';
-import { Prompt } from 'next/font/google';
 
 import { Providers } from '../providers';
 import './globals.css';
 
-const prompt = Prompt({
-  variable: '--font-prompt',
-  subsets: ['latin'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
-});
-
 export const metadata: Metadata = {
-  title: 'oauth-oidc-state-pkce-poc',
+  title: 'Branch & Co | Store workspace',
   description: 'External OAuth with revocable PostgreSQL application sessions',
 };
 
@@ -22,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${prompt.variable} font-prompt`}>
+      <body>
         <Providers>{children}</Providers>
       </body>
     </html>

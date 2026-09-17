@@ -31,7 +31,15 @@ export async function clientFetch<TResponse>(
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    const error = (await response.json().catch(() => null)) as {
+      message?: string | string[];
+    } | null;
+    let message = `Request failed (${response.status})`;
+    if (error?.message)
+      message = Array.isArray(error.message)
+        ? error.message.join(', ')
+        : error.message;
+    throw new Error(message);
   }
 
   const text = await response.text();

@@ -1,84 +1,123 @@
 import Link from 'next/link';
-
+const personas = [
+  {
+    id: 'mock-manager-10',
+    title: 'Store manager',
+    branch: 'Siam Square · Branch 10',
+    description: 'Manage inventory, record sales, and prepare orders.',
+    initials: 'SM',
+  },
+  {
+    id: 'mock-staff-10',
+    title: 'Store staff',
+    branch: 'Siam Square · Branch 10',
+    description: 'Record sales and prepare orders. Inventory is view only.',
+    initials: 'ST',
+  },
+  {
+    id: 'mock-manager-42',
+    title: 'Store manager',
+    branch: 'Ari Neighborhood · Branch 42',
+    description: 'The same tools, scoped to a different branch.',
+    initials: 'AM',
+  },
+  {
+    id: 'mock-hq',
+    title: 'HQ administrator',
+    branch: 'All assigned branches',
+    description: 'Switch between branches and oversee daily operations.',
+    initials: 'HQ',
+  },
+];
 export default async function Home({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const apiUrl =
+  const api =
     process.env.API_PUBLIC_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
     process.env.NEXT_PUBLIC_API ||
     'http://localhost:3001';
   return (
-    <main className="mx-auto max-w-3xl p-10">
-      <p className="mb-4 text-sm tracking-widest text-blue-600 uppercase">
-        Turborepo authentication demo
-      </p>
-      <h1 className="mb-4 text-4xl font-bold">
-        External OAuth, revocable application session
-      </h1>
-      <p className="mb-6 text-lg">
-        Walk through an authorization-code redirect with state and PKCE, then
-        see how the API creates a revocable PostgreSQL-backed session.
-      </p>
-      {error && (
-        <p role="alert" className="mb-6 rounded-lg bg-red-50 p-4 text-red-700">
-          Login failed: invalid, expired, or mismatched callback.
+    <main className="login-page">
+      <section className="login-story">
+        <Link href="/" className="brand">
+          <span className="brand-mark">b.</span> branch & co
+        </Link>
+        <div>
+          <p className="eyebrow">A LITTLE SIMPLER. EVERY DAY.</p>
+          <h1>
+            Good stores.
+            <br />
+            Great people.
+            <br />
+            <em>One workspace.</em>
+          </h1>
+          <p>
+            From the first coffee to the last order,
+            <br />
+            keep every branch running beautifully.
+          </p>
+          <div className="store-illustration" aria-hidden="true">
+            <div className="awning">BRANCH & CO</div>
+            <div className="store-window">
+              <span>
+                OPEN
+                <br />
+                <small>something good inside</small>
+              </span>
+              <div className="shelf">
+                ▰ ▰ ▰<br />▰ ▰ ▰
+              </div>
+            </div>
+            <div className="store-base" />
+          </div>
+        </div>
+        <small>Made for the everyday business of running a store.</small>
+      </section>
+      <section className="login-form">
+        <span className="pill green">INTERACTIVE STORE DEMO</span>
+        <h2>Make yourself at home.</h2>
+        <p className="muted">
+          Choose a demo identity to explore your workspace.
         </p>
-      )}
-      <Link
-        href={`${apiUrl}/auth/login`}
-        className="inline-block rounded-lg bg-blue-700 px-6 py-3 font-semibold text-white"
-      >
-        Start mock ThaiD login
-      </Link>
-      <section className="mt-6">
-        <h2 className="font-bold">Try an application identity</h2>
-        <div className="mt-2 flex flex-wrap gap-3 text-sm text-blue-700">
-          {[
-            ['Customer', 'mock-customer'],
-            ['Store 10 staff', 'mock-staff-10'],
-            ['Store 10 manager', 'mock-manager-10'],
-            ['Store 42 manager', 'mock-manager-42'],
-            ['HQ admin', 'mock-hq'],
-          ].map(([label, persona]) => (
+        {error && (
+          <p role="alert" className="error">
+            Sign-in failed or expired. Please try again.
+          </p>
+        )}
+        <div className="persona-list">
+          {personas.map((p) => (
             <Link
-              key={persona}
-              href={`${apiUrl}/auth/login?persona=${persona}`}
-              className="underline"
+              key={p.id}
+              href={`${api}/auth/login?persona=${p.id}`}
+              className="persona"
             >
-              {label}
+              <div className="avatar">{p.initials}</div>
+              <div>
+                <h3>
+                  {p.title}
+                  <span>{p.branch}</span>
+                </h3>
+                <p>{p.description}</p>
+              </div>
+              <span aria-hidden="true">↗</span>
             </Link>
           ))}
         </div>
+        <div className="login-info">
+          <strong>Local OAuth demonstration</strong>
+          <p>
+            These identities use a mock provider with authorization code, state,
+            and PKCE. No external account or password is needed. Permissions and
+            branch access come from the application database.
+          </p>
+        </div>
+        <p className="login-bottom">
+          Two branches. One shared catalog. Access that fits your role.
+        </p>
       </section>
-      <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        <section className="rounded-xl border p-5">
-          <h2 className="mb-2 font-bold">External provider</h2>
-          <p>
-            Local mock accepts the PKCE challenge and returns an authorization
-            code. It is a teaching stand-in, not ThaiD.
-          </p>
-        </section>
-        <section className="rounded-xl border p-5">
-          <h2 className="mb-2 font-bold">Your application</h2>
-          <p>
-            Server verifies state, exchanges the code with the verifier, maps
-            identity, and issues a separate HttpOnly session.
-          </p>
-        </section>
-      </div>
-      <ol className="mt-10 list-inside list-decimal space-y-2 text-sm text-slate-600">
-        <li>Login creates a 5-minute encrypted state + verifier cookie.</li>
-        <li>Browser redirects through the mock authorization server.</li>
-        <li>Callback validates state and exchanges code using PKCE.</li>
-        <li>
-          API stores a hashed session token in PostgreSQL and protects the
-          dashboard.
-        </li>
-      </ol>
     </main>
   );
 }
