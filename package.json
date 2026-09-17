@@ -27,7 +27,8 @@
     "db:studio": "cd packages/prisma && npm run db:studio",
     "env:setup": "node scripts/setup-env.js",
     "env:distribute": "node scripts/distribute-env.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:retail": "node scripts/test-retail.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.2.0",

@@ -13,3 +13,5 @@ export type {
   OrderResponse,
   OrderStatus,
 } from './types.js';
+export { retailApi } from './retail.js';
+export type { RetailDashboard } from './retail.js';

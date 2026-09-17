@@ -1,3 +1,4 @@
+import { RetailModule } from './retail/retail.module';
 import { Module } from '@nestjs/common';
 
 import { LinksModule } from './links/links.module';
@@ -9,7 +10,7 @@ import { AppService } from './app.service';
 import { AppController } from './app.controller';
 
 @Module({
-  imports: [PrismaModule, AuthModule, LinksModule, OrdersModule],
+  imports: [PrismaModule, AuthModule, LinksModule, OrdersModule, RetailModule],
   controllers: [AppController],
   providers: [AppService],
 })
