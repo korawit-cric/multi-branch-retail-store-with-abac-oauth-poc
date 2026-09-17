@@ -1,6 +1,6 @@
 # Backend-owned mock login and revocable sessions
 
-NestJS owns the OAuth-style login flow and PostgreSQL-backed application sessions. Next.js starts login by linking to the API, renders the dashboard, and forwards the HttpOnly cookie during server rendering. The local provider is a teaching stand-in, not ThaiD, and does not authenticate a real person.
+NestJS owns the OAuth-style login flow and PostgreSQL-backed application sessions. Next.js starts login by linking to the API, renders the dashboard, and uses the frontend-owned fetch client with credentials for TanStack Query requests. The local provider is a teaching stand-in, not ThaiD, and does not authenticate a real person.
 
 ## Flow
 
@@ -24,3 +24,5 @@ Follow the root [`README.md`](../../README.md) to configure the shared secret an
 A real ThaiD adapter must use registered endpoints, the exact redirect URI, required client authentication, and verified OIDC identity data, including signature, issuer, audience, expiry, nonce where applicable, and claim mapping. Callback query parameters are not identity.
 
 The temporary login attempt is not reliably single-use across concurrent callbacks because it remains cookie-backed. Production systems should add one-time login-attempt storage when replay consumption is required. Also add rate limits, session cleanup, device metadata, key rotation, and authorization audit logging.
+
+The local mock provider rejects authorization-code reuse within one API process and is disabled when `NODE_ENV=production`. Its consumed-code cache is in memory: use a real provider and durable one-time code storage before deploying across processes.
