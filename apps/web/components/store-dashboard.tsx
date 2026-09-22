@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ordersApi, retailApi } from '@repo/api-client';
 import { Button } from '@repo/ui/button';
-import { clientFetch } from '../lib/fetch/client';
+import { ApiError, clientFetch } from '../lib/fetch/client';
 
 const money = (n: number) =>
   new Intl.NumberFormat('en-TH', { style: 'currency', currency: 'THB' }).format(
@@ -23,6 +23,12 @@ type Section = (typeof sections)[number];
 
 export function StoreDashboard() {
   const cache = useQueryClient();
+  const [overrideRefund, setOverrideRefund] = useState(false);
+  const [refundResult, setRefundResult] = useState<{
+    orderId: string;
+    status: number | null;
+    body: unknown;
+  } | null>(null);
   const [section, setSection] = useState<Section>('Overview');
   const [branch, setBranch] = useState('');
   const [search, setSearch] = useState('');
@@ -40,6 +46,28 @@ export function StoreDashboard() {
       setAdjustId('');
       setSaleOpen(false);
       setNotice('Saved successfully. Your branch is up to date.');
+      await cache.invalidateQueries({ queryKey: ['retail'] });
+    },
+  });
+  const refund = useMutation({
+    mutationFn: (id: string) => clientFetch(ordersApi.refund(id)),
+    onMutate: () => {
+      setRefundResult(null);
+    },
+    onSuccess: (body, orderId) => {
+      setRefundResult({ orderId, status: 201, body });
+    },
+    onError: (error, orderId) => {
+      setRefundResult({
+        orderId,
+        status: error instanceof ApiError ? error.status : null,
+        body:
+          error instanceof ApiError
+            ? error.responseBody
+            : { message: error.message },
+      });
+    },
+    onSettled: async () => {
       await cache.invalidateQueries({ queryKey: ['retail'] });
     },
   });
@@ -82,7 +110,7 @@ export function StoreDashboard() {
     ) || [];
   const orders = store?.orders || [];
   const lowStock = store?.products.filter((p) => p.stock < 10) || [];
-  const busy = mutation.isPending;
+  const busy = mutation.isPending || refund.isPending;
   const run = (action: () => Promise<unknown>) => {
     setNotice('');
     mutation.mutate(action);
@@ -97,6 +125,7 @@ export function StoreDashboard() {
             <th>Status</th>
             <th>Total</th>
             <th>Next step</th>
+            <th>Demo refund</th>
           </tr>
         </thead>
         <tbody>
@@ -146,6 +175,23 @@ export function StoreDashboard() {
                 ) : (
                   <span className="muted">No action</span>
                 )}
+              </td>
+              <td>
+                <button
+                  className="text-action"
+                  aria-label={`Refund order ${o.id}`}
+                  disabled={
+                    busy || (!o.capabilities.refund.allowed && !overrideRefund)
+                  }
+                  onClick={() => refund.mutate(o.id)}
+                >
+                  Refund
+                </button>
+                <small className="refund-reason">
+                  {o.capabilities.refund.allowed
+                    ? 'Allowed by backend'
+                    : o.capabilities.refund.reason}
+                </small>
               </td>
             </tr>
           ))}
@@ -230,8 +276,11 @@ export function StoreDashboard() {
               <span>Active branch</span>
               <select
                 value={store?.id || ''}
+                disabled={busy}
                 onChange={(e) => {
                   setBranch(e.target.value);
+                  setOverrideRefund(false);
+                  setRefundResult(null);
                   setAdjustId('');
                   setSaleOpen(false);
                 }}
@@ -382,6 +431,41 @@ export function StoreDashboard() {
                       >
                         ＋ Record a sale
                       </Button>
+                    )}
+                  </div>
+                  <div className="capability-demo">
+                    <strong>Try the authorization boundary</strong>
+                    <p>
+                      Refund buttons use capabilities returned by the API for
+                      you and each order. This demo only changes order status;
+                      it does not move money or return stock.
+                    </p>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={overrideRefund}
+                        disabled={busy}
+                        onChange={(event) =>
+                          setOverrideRefund(event.target.checked)
+                        }
+                      />
+                      Demo: enable denied refund buttons
+                    </label>
+                    <p>
+                      The checkbox changes the UI only. Click a denied refund to
+                      see the backend response. Allowed refunds still change the
+                      order.
+                    </p>
+                    {refundResult && (
+                      <div role="status" className="backend-response">
+                        <strong>
+                          POST /orders/{refundResult.orderId}/refund —{' '}
+                          {refundResult.status
+                            ? `HTTP ${refundResult.status}`
+                            : 'Network error'}
+                        </strong>
+                        <pre>{JSON.stringify(refundResult.body, null, 2)}</pre>
+                      </div>
                     )}
                   </div>
                   {orderTable}

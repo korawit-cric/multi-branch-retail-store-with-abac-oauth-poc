@@ -1,5 +1,16 @@
 import type { ApiEndpointWithBody } from '@repo/api-client';
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly responseBody: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_API ||
@@ -39,7 +50,7 @@ export async function clientFetch<TResponse>(
       message = Array.isArray(error.message)
         ? error.message.join(', ')
         : error.message;
-    throw new Error(message);
+    throw new ApiError(response.status, message, error);
   }
 
   const text = await response.text();
