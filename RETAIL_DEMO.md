@@ -59,7 +59,7 @@ npm run dev --workspace=web -- --port 3100
 
 Managers and HQ have `store.read`, `order.read`, `order.create`, `order.update_status`, and `inventory.adjust`. Staff have the same read, sale, and order-status permissions but no inventory writes. Every retail query also checks tenant, region, and assigned branch IDs. HQ access comes from assignments, not an authorization bypass.
 
-The template's customer identity, access-summary endpoint, refund permission, and legacy order examples remain available to existing API consumers. Customers cannot open the manager workspace. The UI does not expose the template's simplified refund operation because this version does not model actual payment or refund processing.
+The template's customer identity, access-summary endpoint, refund permission, and legacy order examples remain available to existing API consumers. Customers cannot open the manager workspace. The Orders screen exposes the template's simplified refund operation as an authorization demonstration: it only marks an order REFUNDED, with no money transfer or stock return.
 
 ## Mapping to the supplied PDFs
 
@@ -97,3 +97,13 @@ npm run test:retail
 `test:retail` requires a running seeded development API configured through `.env`. It creates one test sale and audit entries, restores the tested product's starting stock, and revokes its own sessions. Run it only on a local demo database. It checks OAuth login, session revocation, role denials, branch isolation, invalid inputs, untrusted origins, negative stock, server-owned receipt prices, order transitions, and two concurrent requests competing for one available unit.
 
 The local mock provider does not authenticate real people. Code replay protection is process-local and production mode disables the mock. Real deployment requires an actual OAuth/OIDC provider adapter and durable one-time authorization flow storage; no provider credentials are required for this demo.
+
+## Capability override demonstration
+
+Open **Orders** as the Siam Square manager. Every order includes `capabilities.refund`, calculated by the API for the signed-in user. Order 902 exceeds the seeded manager's THB 500 refund limit, so its Refund button is disabled with a backend-provided explanation. Staff have no refund permission, so all their Refund buttons are disabled.
+
+Check **Demo: enable denied refund buttons** and click a disabled-by-policy refund. The request goes to the normal refund endpoint; the checkbox is never sent to the API. The response panel shows the real HTTP 403 status and JSON error body. Uncheck it to restore the normal disabled state. The override resets on a branch change or a page reload.
+
+Allowed refunds still change the order status. This demonstration does not contact a payment provider or replenish inventory.
+
+`apps/api/src/orders/refund.policy.ts` defines one Prisma predicate for role eligibility, tenant, region, branch, paid status, and refund limit. Order detail and dashboard responses calculate capabilities with that policy (one batched eligibility query for dashboard orders). The refund endpoint reuses it in a conditional atomic update. A read-time capability is a snapshot, so the backend checks again at execution and the frontend refreshes capabilities after every refund attempt.

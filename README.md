@@ -53,7 +53,7 @@ The overview summarizes the **latest 50 orders per branch**, excluding refunded 
 - **Ari manager:** the same manager actions, limited to branch 42.
 - **HQ administrator:** operate across assigned branches 10 and 42. HQ still needs explicit branch assignments.
 
-The retail workspace uses `store.read`, `order.read`, `order.create`, `order.update_status`, and `inventory.adjust`. The inherited customer identity and refund demonstration remain API-only; customers cannot open the store-manager workspace.
+The retail workspace uses `store.read`, `order.read`, `order.create`, `order.update_status`, and `inventory.adjust`. The inherited customer identity remains API-only; customers cannot open the store-manager workspace.
 
 Hiding or disabling a button is only a UI aid. NestJS loads the actor's current grants and assignments from PostgreSQL and enforces access on every request, including direct API calls.
 
@@ -164,6 +164,14 @@ The workspace used for these screenshots is configured on [localhost:3100](http:
 5. Open **Orders**, start preparing the sale, and mark it ready.
 6. Sign out and choose **Store staff**; inventory adjustments are disabled and the API denies attempts to bypass the UI.
 7. Try **Ari manager** or **HQ administrator** to compare branch scope, then inspect **My access**.
+
+## Try a denied action
+
+In **Orders**, Refund buttons use per-order capabilities computed by the API. As the Siam Square manager, order 902 is denied because it exceeds the THB 500 refund limit. Staff cannot refund any order.
+
+Check **Demo: enable denied refund buttons**, then click a denied refund. The UI displays the actual **HTTP 403** response and JSON error. The checkbox only enables the button; it does not change backend authorization. Both capability generation and refund execution reuse the same backend policy, and capabilities refresh after an attempt.
+
+An allowed demo refund changes order status only—no payment or stock return is processed. See [the capability walkthrough](RETAIL_DEMO.md#capability-override-demonstration).
 
 ## Database design
 
