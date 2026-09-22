@@ -1,3 +1,4 @@
+import { refundCapabilities, refundPolicy } from './refund.policy';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { OrderStatus, RoleCode, type Prisma } from '@repo/prisma';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,7 +15,13 @@ export class OrdersService {
     });
     if (!order)
       throw new ForbiddenException('Order is outside the authorized scope');
-    return this.serialize(order);
+    const capabilities = await refundCapabilities(this.prisma.client, actor, [
+      order.id,
+    ]);
+    return {
+      ...this.serialize(order),
+      capabilities: { refund: capabilities.get(order.id)! },
+    };
   }
 
   async updateStatus(actor: AuthenticatedActor, id: string, next: OrderStatus) {
@@ -45,17 +52,13 @@ export class OrdersService {
   }
 
   async refund(actor: AuthenticatedActor, id: string) {
-    this.requirePermission(actor, 'order.refund');
+    const policy = refundPolicy(actor);
+    if (!policy.permitted) throw new ForbiddenException(policy.reason);
     const result = await this.prisma.client.order.updateMany({
-      where: {
-        ...this.scopeStores(actor, id),
-        status: OrderStatus.PAID,
-        total: { lte: actor.refundLimit },
-      },
+      where: { ...policy.where, id },
       data: { status: OrderStatus.REFUNDED },
     });
-    if (result.count !== 1)
-      throw new ForbiddenException('Refund conditions were not satisfied');
+    if (result.count !== 1) throw new ForbiddenException(policy.reason);
     return { orderId: id, status: OrderStatus.REFUNDED };
   }
 
@@ -73,9 +76,8 @@ export class OrdersService {
         const where =
           permission === 'order.refund'
             ? {
-                ...this.scopeStores(actor, id),
-                status: OrderStatus.PAID,
-                total: { lte: actor.refundLimit },
+                ...refundPolicy(actor).where,
+                id,
               }
             : this.scope(actor, id);
         const allowed = (await this.prisma.client.order.count({ where })) === 1;

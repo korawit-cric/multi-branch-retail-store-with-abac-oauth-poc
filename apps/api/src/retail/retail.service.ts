@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { refundCapabilities } from '../orders/refund.policy';
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@repo/prisma';
 import { PrismaService } from '../prisma/prisma.service';
@@ -41,6 +42,11 @@ export class RetailService {
         audits: { orderBy: { createdAt: 'desc' }, take: 15 },
       },
     });
+    const capabilities = await refundCapabilities(
+      this.prisma.client,
+      actor,
+      stores.flatMap((store) => store.orders.map((order) => order.id)),
+    );
     return {
       actor,
       stores: stores.map((store) => ({
@@ -49,6 +55,7 @@ export class RetailService {
         orders: store.orders.map((o) => ({
           ...o,
           total: Number(o.total),
+          capabilities: { refund: capabilities.get(o.id)! },
           items: o.items.map((i) => ({ ...i, unitPrice: Number(i.unitPrice) })),
         })),
       })),

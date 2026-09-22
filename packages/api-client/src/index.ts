@@ -11,6 +11,8 @@ export type {
   Link,
   AccessSummary,
   OrderResponse,
+  ActionCapability,
+  OrderCapabilities,
   OrderStatus,
 } from './types.js';
 export { retailApi } from './retail.js';

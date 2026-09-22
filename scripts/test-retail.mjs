@@ -152,6 +152,19 @@ try {
   const after = (await dashboard(manager)).stores[0];
   assert.equal(after.products.find((p) => p.id === '10-coffee').stock, 0);
   const order = after.orders.find((o) => o.id === created.id);
+  assert.equal(order.capabilities.refund.allowed, true);
+  const staffOrder = (await dashboard(staff)).stores[0].orders.find(
+    (o) => o.id === created.id,
+  );
+  assert.equal(staffOrder.capabilities.refund.allowed, false);
+  const denied = await request(staff, `/orders/${created.id}/refund`);
+  assert.equal(denied.status, 403);
+  assert.equal(
+    (await denied.json()).message,
+    staffOrder.capabilities.refund.reason,
+  );
+  const detail = await request(manager, `/orders/${created.id}`, null, 'GET');
+  assert.equal((await detail.json()).capabilities.refund.allowed, true);
   assert.equal(order.total, before.price);
   assert.equal(order.items[0].unitPrice, before.price);
   assert.equal(order.items[0].productNameSnapshot, 'Cold brew coffee');
@@ -187,6 +200,18 @@ try {
       )
     ).status,
     200,
+  );
+  // The earlier allowed capability is only a snapshot: READY must now be denied.
+  const staleAttempt = await request(manager, `/orders/${created.id}/refund`);
+  assert.equal(staleAttempt.status, 403);
+  const readyOrder = (await dashboard(manager)).stores[0].orders.find(
+    (o) => o.id === created.id,
+  );
+  assert.equal(readyOrder.status, 'READY');
+  assert.equal(readyOrder.capabilities.refund.allowed, false);
+  assert.equal(
+    (await staleAttempt.json()).message,
+    readyOrder.capabilities.refund.reason,
   );
 } finally {
   const current = (await dashboard(manager)).stores[0].products.find(

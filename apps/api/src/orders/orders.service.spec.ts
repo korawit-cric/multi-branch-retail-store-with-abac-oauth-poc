@@ -19,6 +19,7 @@ const actor: AuthenticatedActor = {
 function setup() {
   const order = {
     findFirst: jest.fn(),
+    findMany: jest.fn().mockResolvedValue([]),
     updateMany: jest.fn(),
     count: jest.fn(),
   };
@@ -68,5 +69,32 @@ describe('OrdersService', () => {
       service.refund({ ...actor, permissions: [] }, '901'),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(order.updateMany).not.toHaveBeenCalled();
+  });
+  it('uses the same scoped SQL policy for the capability and the refund write', async () => {
+    const { order, service } = setup();
+    order.findFirst.mockResolvedValue({ id: '901', total: 300 });
+    order.findMany.mockResolvedValue([{ id: '901' }]);
+    order.updateMany.mockResolvedValue({ count: 1 });
+    const detail = await service.findOne(actor, '901');
+    expect(detail.capabilities.refund).toEqual({ allowed: true, reason: null });
+    await service.refund(actor, '901');
+    const capabilityWhere = order.findMany.mock.calls[0][0].where;
+    expect(capabilityWhere).toEqual({
+      ...order.updateMany.mock.calls[0][0].where,
+      id: { in: ['901'] },
+    });
+  });
+
+  it('rejects a refund when a previously allowed order no longer matches', async () => {
+    const { order, service } = setup();
+    order.findFirst.mockResolvedValue({ id: '901', total: 300 });
+    order.findMany.mockResolvedValue([{ id: '901' }]);
+    expect(
+      (await service.findOne(actor, '901')).capabilities.refund.allowed,
+    ).toBe(true);
+    order.updateMany.mockResolvedValue({ count: 0 });
+    await expect(service.refund(actor, '901')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 });

@@ -1,4 +1,9 @@
-import type { ApiEndpoint, ApiEndpointWithBody, OrderStatus } from './types.js';
+import type {
+  ApiEndpoint,
+  ApiEndpointWithBody,
+  OrderStatus,
+  OrderCapabilities,
+} from './types.js';
 
 export interface RetailDashboard {
   actor: {
@@ -23,6 +28,7 @@ export interface RetailDashboard {
       product: { name: string; sku: string; category: string };
     }>;
     orders: Array<{
+      capabilities: OrderCapabilities;
       id: string;
       status: OrderStatus;
       total: number;

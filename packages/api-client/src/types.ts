@@ -30,7 +30,17 @@ export interface UpdateLinkDto {
 
 export type OrderStatus = 'PAID' | 'PREPARING' | 'READY' | 'REFUNDED';
 
+export interface ActionCapability {
+  allowed: boolean;
+  reason: string | null;
+}
+
+export interface OrderCapabilities {
+  refund: ActionCapability;
+}
+
 export interface OrderResponse {
+  capabilities: OrderCapabilities;
   id: string;
   tenantId: string;
   storeId: string;
